@@ -56,7 +56,7 @@ func (t *SingleChannel) Start(ctx context.Context) {
 				eff = eff[:r]
 				copy(eff, t.eff[key])
 
-				// WARN: There is posibility that an effect contains Link(),
+				// WARN: There is posibility that an effect contains Bind(),
 				// should Unlock() before Do() to avoid a deadlock.
 				t.mu.RUnlock()
 				for _, e := range eff {
@@ -68,8 +68,8 @@ func (t *SingleChannel) Start(ctx context.Context) {
 	}()
 }
 
-// Link runs the effect when the key is triggered.
-func (t *SingleChannel) Link(key ref.Key, eff *effect.Effect) {
+// Bind runs the effect when the key is triggered.
+func (t *SingleChannel) Bind(key ref.Key, eff *effect.Effect) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.eff == nil {
@@ -87,7 +87,7 @@ func (t *SingleChannel) Link(key ref.Key, eff *effect.Effect) {
 	t.eff[key] = append(effs, eff)
 }
 
-func (t *SingleChannel) Unlink(key ref.Key, eff *effect.Effect) {
+func (t *SingleChannel) Unbind(key ref.Key, eff *effect.Effect) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.eff == nil {
@@ -112,7 +112,7 @@ func (t *SingleChannel) Unlink(key ref.Key, eff *effect.Effect) {
 func (t *SingleChannel) Track(key ref.Key) {
 	eff := effect.GetActive()
 	if eff != nil {
-		t.Link(key, eff)
+		t.Bind(key, eff)
 	}
 }
 
