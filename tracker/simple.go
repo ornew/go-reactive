@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/ornew/go-reactive/effect"
+	"github.com/ornew/go-reactive/pool"
 	"github.com/ornew/go-reactive/pubsub"
 	"github.com/ornew/go-reactive/ref"
 )
@@ -34,6 +35,7 @@ func (t *SingleChannel) Start(ctx context.Context) {
 	s := t.top.Subscribe()
 	go func() {
 		defer s.Unsubscribe()
+		p := pool.NewSlice[*effect.Effect](0)
 		for {
 			select {
 			case <-ctx.Done():
@@ -43,13 +45,24 @@ func (t *SingleChannel) Start(ctx context.Context) {
 					return
 				}
 				t.mu.RLock()
-				effs := make([]*effect.Effect, len(t.eff[key]))
-				copy(effs, t.eff[key])
-				// WARN: Effect contains Link, should be Unlock before Effect.
+				r := len(t.eff[key])
+				if r == 0 {
+					t.mu.RUnlock()
+					continue
+				}
+
+				// Copy effects.
+				eff, put := p.Get(r)
+				eff = eff[:r]
+				copy(eff, t.eff[key])
+
+				// WARN: There is posibility that an effect contains Link(),
+				// should Unlock() before Do() to avoid a deadlock.
 				t.mu.RUnlock()
-				for _, e := range effs {
+				for _, e := range eff {
 					e.Do()
 				}
+				put(eff) // Return to pool.
 			}
 		}
 	}()
