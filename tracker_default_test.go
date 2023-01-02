@@ -28,9 +28,9 @@ import (
 	"github.com/ornew/go-reactive/ref"
 )
 
-func TestSimpleChannel_Ref(t *testing.T) {
+func TestChannelTracker_Ref(t *testing.T) {
 	ctx := context.TODO()
-	tr := &reactive.SingleChannel{}
+	tr := &reactive.ChannelTracker{}
 	tr.Start(ctx)
 
 	t.Log("a=100")
@@ -93,9 +93,9 @@ func TestSimpleChannel_Ref(t *testing.T) {
 	}
 }
 
-func TestSimpleChannel_Compute(t *testing.T) {
+func TestChannelTracker_Compute(t *testing.T) {
 	ctx := context.TODO()
-	tr := &reactive.SingleChannel{}
+	tr := &reactive.ChannelTracker{}
 	tr.Start(ctx)
 
 	t.Log("a=100")

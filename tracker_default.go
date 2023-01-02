@@ -20,56 +20,76 @@ import (
 	"sync"
 
 	"github.com/ornew/go-reactive/effect"
-	"github.com/ornew/go-reactive/pool"
-	"github.com/ornew/go-reactive/pubsub"
 	"github.com/ornew/go-reactive/ref"
 )
 
-type SingleChannel struct {
+type ChannelTracker struct {
 	mu  sync.RWMutex
+	s   sync.Once
 	eff map[ref.Key][]*effect.Effect
-	top pubsub.Topic[ref.Key]
+	ch  chan ref.Key
 }
 
-func (t *SingleChannel) Start(ctx context.Context) {
-	s := t.top.Subscribe()
-	go func() {
-		defer s.Unsubscribe()
-		p := pool.NewSlice[*effect.Effect](0)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case key, ok := <-s.Ch:
-				if !ok {
+func (t *ChannelTracker) Track(key ref.Key) {
+	eff := effect.GetActive()
+	if eff != nil {
+		t.Bind(key, eff)
+	}
+}
+
+func (t *ChannelTracker) Trigger(key ref.Key) {
+	t.ch <- key
+}
+
+func (t *ChannelTracker) Start(ctx context.Context) {
+	var w sync.WaitGroup
+	w.Add(1)
+	t.s.Do(func() {
+		t.ch = make(chan ref.Key)
+		w.Done()
+		go func() {
+			defer func() {
+				close(t.ch)
+				t.ch = nil
+			}()
+			effects := make([]*effect.Effect, 0, 16)
+			for {
+				select {
+				case <-ctx.Done():
 					return
-				}
-				t.mu.RLock()
-				r := len(t.eff[key])
-				if r == 0 {
+				case key, ok := <-t.ch:
+					if !ok {
+						return
+					}
+					t.mu.RLock()
+					r := len(t.eff[key])
+					if r == 0 {
+						t.mu.RUnlock()
+						continue
+					}
+
+					// Copy effects.
+					if r > cap(effects) {
+						effects = make([]*effect.Effect, 0, r*2)
+					}
+					effects = effects[:r]
+					copy(effects, t.eff[key])
+
+					// WARN: There is posibility that an effect contains Bind(),
+					// should Unlock() before Do() to avoid a deadlock.
 					t.mu.RUnlock()
-					continue
+					for _, e := range effects {
+						e.Do()
+					}
 				}
-
-				// Copy effects.
-				eff, put := p.Get(r)
-				eff = eff[:r]
-				copy(eff, t.eff[key])
-
-				// WARN: There is posibility that an effect contains Bind(),
-				// should Unlock() before Do() to avoid a deadlock.
-				t.mu.RUnlock()
-				for _, e := range eff {
-					e.Do()
-				}
-				put(eff) // Return to pool.
 			}
-		}
-	}()
+		}()
+	})
+	w.Wait() // Wait to make t.ch
 }
 
 // Bind runs the effect when the key is triggered.
-func (t *SingleChannel) Bind(key ref.Key, eff *effect.Effect) {
+func (t *ChannelTracker) Bind(key ref.Key, eff *effect.Effect) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.eff == nil {
@@ -87,7 +107,7 @@ func (t *SingleChannel) Bind(key ref.Key, eff *effect.Effect) {
 	t.eff[key] = append(effs, eff)
 }
 
-func (t *SingleChannel) Unbind(key ref.Key, eff *effect.Effect) {
+func (t *ChannelTracker) Unbind(key ref.Key, eff *effect.Effect) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.eff == nil {
@@ -107,15 +127,4 @@ func (t *SingleChannel) Unbind(key ref.Key, eff *effect.Effect) {
 			return
 		}
 	}
-}
-
-func (t *SingleChannel) Track(key ref.Key) {
-	eff := effect.GetActive()
-	if eff != nil {
-		t.Bind(key, eff)
-	}
-}
-
-func (t *SingleChannel) Trigger(key ref.Key) {
-	t.top.Publish(key)
 }
