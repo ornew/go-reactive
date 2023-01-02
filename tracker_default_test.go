@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package tracker_test
+package reactive_test
 
 import (
 	"context"
@@ -23,14 +23,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/ornew/go-reactive"
 	"github.com/ornew/go-reactive/effect"
 	"github.com/ornew/go-reactive/ref"
-	"github.com/ornew/go-reactive/tracker"
 )
 
 func TestSimpleChannel_Ref(t *testing.T) {
 	ctx := context.TODO()
-	tr := &tracker.SingleChannel{}
+	tr := &reactive.SingleChannel{}
 	tr.Start(ctx)
 
 	t.Log("a=100")
