@@ -24,8 +24,8 @@ import (
 )
 
 type ChannelTracker struct {
-	mu  sync.RWMutex
 	s   sync.Once
+	mu  sync.RWMutex
 	eff map[ref.Key][]*effect.Effect
 	ch  chan ref.Key
 }

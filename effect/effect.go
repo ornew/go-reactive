@@ -33,20 +33,21 @@ func GetActive() *Effect {
 
 func setActive(e *Effect) {
 	mu.Lock()
-	defer mu.Unlock()
 	if active != nil {
+		mu.Unlock()
 		panic("nesting effect is not allowed.")
 	}
 	active = e
+	mu.Unlock()
 }
 
 func clearActive() {
 	mu.Lock()
-	defer mu.Unlock()
 	// if active == nil {
 	// 	panic("acrive effect is not found.")
 	// }
 	active = nil
+	mu.Unlock()
 }
 
 type Effect struct {
@@ -60,6 +61,6 @@ func (e *Effect) Do() {
 }
 
 func Track(effect func()) {
-	eff := &Effect{effect: effect}
-	eff.Do()
+	e := &Effect{effect: effect}
+	e.Do()
 }
