@@ -34,7 +34,7 @@ func TestSimpleChannel_Ref(t *testing.T) {
 	tr.Start(ctx)
 
 	t.Log("a=100")
-	a := ref.New(100, tr)
+	a := ref.New(tr, 100)
 
 	// no effect tracking context - no track
 	assert.Equal(t, 100, a.Get())
@@ -78,7 +78,7 @@ func TestSimpleChannel_Ref(t *testing.T) {
 	}
 
 	t.Log("d=0")
-	d := ref.New(0, tr)
+	d := ref.New(tr, 0)
 	var e int
 	effect.Track(func() {
 		// effetc tracking context - track a
@@ -95,14 +95,14 @@ func TestSimpleChannel_Ref(t *testing.T) {
 
 func TestSimpleChannel_Compute(t *testing.T) {
 	ctx := context.TODO()
-	tr := &tracker.SingleChannel{}
+	tr := &reactive.SingleChannel{}
 	tr.Start(ctx)
 
 	t.Log("a=100")
-	a := ref.New(100, tr)
-	b := ref.Compute(func() string {
+	a := ref.New(tr, 100)
+	b := ref.Computed(tr, func() string {
 		return strconv.Itoa(a.Get())
-	}, tr)
+	})
 	t.Logf("b=%q computed", b.Get())
 	assert.Equal(t, 100, a.Get())
 	assert.Equal(t, "100", b.Get())

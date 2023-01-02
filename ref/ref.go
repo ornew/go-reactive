@@ -52,14 +52,14 @@ func (a *Ref[T]) Get() T {
 	return *a.v
 }
 
-func New[T any](v T, t Tracker) Ref[T] {
+func New[T any](t Tracker, v T) Ref[T] {
 	return Ref[T]{
 		t: t,
 		v: &v,
 	}
 }
 
-func Compute[T comparable](fn func() T, t Tracker) (r Ref[T]) {
+func Computed[T comparable](t Tracker, fn func() T) (r Ref[T]) {
 	r.t = t
 	effect.Track(func() {
 		if r.v == nil {
