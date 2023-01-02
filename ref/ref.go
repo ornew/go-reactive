@@ -66,10 +66,10 @@ func Computed[T comparable](t Tracker, fn func() T) (r Ref[T]) {
 			r.Set(fn())
 			return
 		}
-		a := *r.v // Do not use Get() to avoid self-track.
-		b := fn()
-		if a != b {
-			r.Set(b)
+		// Do not use Get() to avoid self-track, get directly.
+		v := fn()
+		if *r.v != v {
+			r.Set(v)
 		}
 	})
 	return r
