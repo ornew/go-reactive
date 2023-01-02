@@ -15,6 +15,8 @@ limitations under the License.
 */
 package ref
 
+import "github.com/ornew/go-reactive/effect"
+
 type Key struct {
 	Ptr  any
 	Name string
@@ -55,4 +57,20 @@ func New[T any](v T, t Tracker) Ref[T] {
 		t: t,
 		v: &v,
 	}
+}
+
+func Compute[T comparable](fn func() T, t Tracker) (r Ref[T]) {
+	r.t = t
+	effect.Track(func() {
+		if r.v == nil {
+			r.Set(fn())
+			return
+		}
+		a := *r.v // Do not use Get() to avoid self-track.
+		b := fn()
+		if a != b {
+			r.Set(b)
+		}
+	})
+	return r
 }
