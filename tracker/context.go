@@ -13,54 +13,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package effect
+package tracker
 
-import (
-	"sync"
-)
+import "sync"
 
-var (
-	mu     sync.RWMutex
-	active *Effect
-)
+type tracking struct {
+	sync.RWMutex
+	active *effect
+}
 
-func GetActive() *Effect {
-	mu.RLock()
-	e := active
-	mu.RUnlock()
+func (c *tracking) Active() *effect {
+	c.RLock()
+	e := c.active
+	c.RUnlock()
 	return e
 }
 
-func setActive(e *Effect) {
-	mu.Lock()
-	if active != nil {
-		mu.Unlock()
+func (c *tracking) Activate(e *effect) {
+	c.Lock()
+	if c.active != nil {
+		c.Unlock()
 		panic("nesting effect is not allowed.")
 	}
-	active = e
-	mu.Unlock()
+	c.active = e
+	c.Unlock()
 }
 
-func clearActive() {
-	mu.Lock()
+func (c *tracking) Deactivate() {
+	c.Lock()
 	// if active == nil {
 	// 	panic("acrive effect is not found.")
 	// }
-	active = nil
-	mu.Unlock()
-}
-
-type Effect struct {
-	effect func()
-}
-
-func (e *Effect) Do() {
-	setActive(e)
-	e.effect()
-	clearActive()
-}
-
-func Track(effect func()) {
-	e := &Effect{effect: effect}
-	e.Do()
+	c.active = nil
+	c.Unlock()
 }

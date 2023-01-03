@@ -13,28 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package reactive_test
+package tracker_test
 
 import (
-	"context"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ornew/go-reactive"
-	"github.com/ornew/go-reactive/effect"
 	"github.com/ornew/go-reactive/ref"
+	"github.com/ornew/go-reactive/tracker"
 )
 
 func TestChannelTracker_Ref(t *testing.T) {
-	ctx := context.TODO()
-	tr := &reactive.ChannelTracker{}
-	tr.Start(ctx)
+	tr := &tracker.Channel{}
 
 	t.Log("a=100")
-	a := ref.New(tr, 100)
+	a := ref.New(100, ref.WithTracker(tr))
 
 	// no effect tracking context - no track
 	assert.Equal(t, 100, a.Get())
@@ -42,7 +38,7 @@ func TestChannelTracker_Ref(t *testing.T) {
 
 	var effectCount int
 	var b int
-	effect.Track(func() {
+	tr.Track(func() {
 		// effect tracking context - track a
 		b = a.Get() + 1
 		t.Logf("b=%v computed", b)
@@ -78,9 +74,9 @@ func TestChannelTracker_Ref(t *testing.T) {
 	}
 
 	t.Log("d=0")
-	d := ref.New(tr, 0)
+	d := ref.New(0, ref.WithTracker(tr))
 	var e int
-	effect.Track(func() {
+	tr.Track(func() {
 		// effetc tracking context - track a
 		e = d.Get() + 1
 		t.Logf("e=%v computed", e)
@@ -94,15 +90,13 @@ func TestChannelTracker_Ref(t *testing.T) {
 }
 
 func TestChannelTracker_Compute(t *testing.T) {
-	ctx := context.TODO()
-	tr := &reactive.ChannelTracker{}
-	tr.Start(ctx)
+	tr := &tracker.Channel{}
 
 	t.Log("a=100")
-	a := ref.New(tr, 100)
-	b := ref.Computed(tr, func() string {
+	a := ref.New(100, ref.WithTracker(tr))
+	b := ref.Computed(func() string {
 		return strconv.Itoa(a.Get())
-	})
+	}, ref.WithTracker(tr))
 	t.Logf("b=%q computed", b.Get())
 	assert.Equal(t, 100, a.Get())
 	assert.Equal(t, "100", b.Get())

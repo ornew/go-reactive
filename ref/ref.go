@@ -15,21 +15,17 @@ limitations under the License.
 */
 package ref
 
-import "github.com/ornew/go-reactive/effect"
-
-type Key struct {
-	Ptr  any
-	Name string
-}
-
-type Tracker interface {
-	Track(key Key)
-	Trigger(key Key)
-}
+import "github.com/ornew/go-reactive/tracker"
 
 type Ref[T any] struct {
-	t Tracker
+	t tracker.Tracker
 	v *T
+}
+
+func (a *Ref[T]) Key() tracker.Key {
+	return tracker.Key{
+		Ptr: a.v,
+	}
 }
 
 func (a *Ref[T]) Set(v T) {
@@ -37,38 +33,61 @@ func (a *Ref[T]) Set(v T) {
 		a.v = new(T)
 	}
 	*a.v = v
-	a.t.Trigger(Key{
-		Ptr: a.v,
-	})
+	a.t.Trigger(a.Key())
 }
 
 func (a *Ref[T]) Get() T {
 	if a.v == nil {
 		a.v = new(T)
 	}
-	a.t.Track(Key{
-		Ptr: a.v,
-	})
+	a.t.Mark(a.Key())
 	return *a.v
 }
 
-func New[T any](t Tracker, v T) Ref[T] {
-	return Ref[T]{
-		t: t,
-		v: &v,
+func (a *Ref[T]) Unref() (v T) {
+	if a.v == nil {
+		return v
+	}
+	return *a.v
+}
+
+type refOptions struct {
+	t tracker.Tracker
+}
+
+type RefOption func(*refOptions)
+
+func WithTracker(t tracker.Tracker) RefOption {
+	return func(o *refOptions) {
+		o.t = t
 	}
 }
 
-func Computed[T comparable](t Tracker, fn func() T) (r Ref[T]) {
-	r.t = t
-	effect.Track(func() {
-		if r.v == nil {
-			r.Set(fn())
-			return
-		}
-		// Do not use Get() to avoid self-track, get directly.
+func Zero[T any](opts ...RefOption) Ref[T] {
+	opt := refOptions{}
+	for _, o := range opts {
+		o(&opt)
+	}
+	if opt.t == nil {
+		opt.t = tracker.DefaultTracker
+	}
+	return Ref[T]{
+		t: opt.t,
+	}
+}
+
+func New[T any](v T, opts ...RefOption) Ref[T] {
+	r := Zero[T](opts...)
+	r.v = &v
+	return r
+}
+
+func Computed[T comparable](fn func() T, opts ...RefOption) Ref[T] {
+	r := Zero[T](opts...)
+	r.t.Track(func() {
 		v := fn()
-		if *r.v != v {
+		// Do not use Get() to avoid self-track, use Unref().
+		if r.Unref() != v {
 			r.Set(v)
 		}
 	})
