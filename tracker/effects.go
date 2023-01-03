@@ -24,7 +24,7 @@ type effect struct {
 
 func (e *effect) Do() {
 	e.ctx.Activate(e)
-	defer e.ctx.Inactivate()
+	defer e.ctx.Deactivate()
 	e.fn()
 }
 

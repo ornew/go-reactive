@@ -32,7 +32,7 @@ type tracker struct {
 }
 
 func (t *tracker) Mark(key Key) {
-	effect := t.ctx.GetActive()
+	effect := t.ctx.Active()
 	if effect != nil {
 		t.em.Add(key, effect)
 	}
