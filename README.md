@@ -4,7 +4,6 @@
 
 ```go
 import (
-	"github.com/ornew/go-reactive"
 	"github.com/ornew/go-reactive/ref"
 )
 
@@ -69,7 +68,7 @@ aRef.Get() // 100
 cRef.Get() // 100
 ```
 
-If creates a `Ref` or updates a value, always copied a value, so the original value will be disconnected.
+If creates a `Ref` or updates a value, always copies a value, so the original value will be disconnected.
 
 ```go
 var b bool
@@ -136,7 +135,7 @@ A `Ref` belong only to one tracking scope.
 If tries to track other tracker's `Ref`, defaults to error.
 
 ```go
-aRef := ref.New(100, trackerA)
+aRef := ref.New(100, ref.WithTracker(trackerA))
 
 // Error.
 trackerB.Track(func() { fmt.Println(aRef.Get()) })
